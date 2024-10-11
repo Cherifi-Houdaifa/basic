@@ -19,6 +19,11 @@ class ifstatment(printable):
         self.cmp = cmp
         self.body = body
 
+class whilestatement(printable):
+    def __init__(self, cmp: comparision, body: list):
+        self.cmp = cmp
+        self.body = body
+
 class expr(printable):
     def __init__(self, left, op: Token, right):
         self.left = left
@@ -30,11 +35,23 @@ class assignment(printable):
         self.op = op
         self.value = value
 
+class letdefinition(printable):
+    def __init__(self, op: Token):
+        self.op = op
+
+class printstatement(printable):
+    def __init__(self, arg: Token):
+        self.arg = arg
+
+class inputstatement(printable):
+    def __init__(self, arg: Token):
+        self.arg = arg
 
 
 def help(tokens):
     for i in range(len(tokens)):
-        print(tokens[i].type, end=' ')
+        print(tokens[i].type, tokens[i].value)
+
 
 
 class Parser:
@@ -46,8 +63,34 @@ class Parser:
         i = 0
         while i < len(tokens):
             if tokens[i].type == Types.IF:
-                ifobject, i = self.handleif(tokens[i:])
-                rslt.append(ifobject)
+                j = i
+                while j < len(tokens):
+                    if tokens[j].type == Types.ENDIF:
+                        break
+                    j += 1
+                else:
+                    self.abort("No ENDIF")
+                rslt.append(self.handleif(tokens[i:j+1]))
+                i = j+1
+            elif tokens[i].type == Types.WHILE:
+                j = i
+                while j < len(tokens):
+                    if tokens[j].type == Types.ENDWHILE:
+                        break
+                    j += 1
+                else:
+                    self.abort("No ENDWHILE")
+                rslt.append(self.handlewhile(tokens[i:j+1]))
+                i = j+1
+            elif tokens[i].type == Types.LET:
+                rslt.append(self.handlelet(tokens[i:i+3]))
+                i+=3
+            elif tokens[i].type == Types.PRINT:
+                rslt.append(self.handleprint(tokens[i:i+3]))
+                i+=3
+            elif tokens[i].type == Types.INPUT:
+                rslt.append(self.handleinput(tokens[i:i+3]))
+                i+=3
             elif tokens[i].type == Types.ident:
                 j = i
                 while j < len(tokens):
@@ -64,23 +107,29 @@ class Parser:
 
     # i is the index from which the if statment starts
     # returns where the if statment ends and the if statment object
-    def handleif(self, tokens: list[Token]) -> tuple[ifstatment, int]:
+    def handleif(self, tokens: list[Token]) -> ifstatment:
         cmptokens = []
-        i = 1
-        while tokens[i].type != Types.THEN:
-            if i+1 == len(tokens):
-                self.abort("THEN not found after IF")
-            cmptokens.append(tokens[i])
-            i+=1
-        i+=1
         bodytokens = []
-        while tokens[i].type != Types.ENDIF:
-            if i+1 == len(tokens):
-                self.abort("ENDIF not found after THEN")
-            bodytokens.append(tokens[i])
+        i = 1
+        while i < len(tokens):
+            if tokens[i].type == Types.THEN:
+                break
+            else:
+                cmptokens.append(tokens[i])
             i+=1
+        else:
+            self.abort("no THEN after IF")
+        i += 1
+        while i < len(tokens):
+            if tokens[i].type == Types.ENDIF:
+                break
+            else:
+                bodytokens.append(tokens[i])
+            i+=1
+        else:
+            self.abort("no ENDIF after THEN")
         
-        return (ifstatment(cmp=self.handlecmp(cmptokens), body=self.parse(bodytokens)), i+1)
+        return ifstatment(cmp=self.handlecmp(cmptokens), body=self.parse(bodytokens))
     
     # takes comparision tokens and returns a comparision object
     # this thing is simple (no expressions)
@@ -141,6 +190,50 @@ class Parser:
                 # make an expression
                 return expr(self.handleexpr(tokens[0:i]), tokens[i], self.handleexpr(tokens[i+1:]))
 
+    def handlelet(self, tokens: list[Token]) -> letdefinition:
+        if len(tokens) != 3:
+            self.abort("wrong usage of LET")
+        if tokens[1].type != Types.ident:
+            self.abort("you can only define a variable using LET")
+        return letdefinition(tokens[1])
+
+    def handleprint(self, tokens: list[Token]) -> printstatement:
+        if len(tokens) != 3:
+            self.abort("wrong usage of PRINT")
+        if tokens[1].type not in [Types.ident, Types.string, Types.number]:
+            self.abort("you can only print strings or variables or numbers")
+        return printstatement(tokens[1])
+    
+    def handleinput(self, tokens: list[Token]) -> inputstatement:
+        if len(tokens) != 3:
+            self.abort("wrong usage of INPUT")
+        if tokens[1].type not in [Types.ident]:
+            self.abort("you can only input numbers")
+        return inputstatement(tokens[1])
+ 
+    def handlewhile(self, tokens: list[Token]) -> whilestatement:
+        cmptokens = []
+        bodytokens = []
+        i = 1
+        while i < len(tokens):
+            if tokens[i].type == Types.DO:
+                break
+            else:
+                cmptokens.append(tokens[i])
+            i+=1
+        else:
+            self.abort("no DO after WHILE")
+        i += 1
+        while i < len(tokens):
+            if tokens[i].type == Types.ENDWHILE:
+                break
+            else:
+                bodytokens.append(tokens[i])
+            i+=1
+        else:
+            self.abort("no ENDWHILE after DO")
+        return whilestatement(self.handlecmp(cmptokens), self.parse(bodytokens))
+        
     def abort(self, message, exitcode=1):
         print("Error:", message)
         exit(exitcode)

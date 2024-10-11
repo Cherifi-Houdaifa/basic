@@ -1,5 +1,5 @@
 from lex import lex
-from parse import Parser 
+from parse import Parser , help
 from emit import codegen, emitexpr
 from evaluate import evalute
 import sys
@@ -9,13 +9,16 @@ if len(sys.argv) != 2:
     exit(1)
 code = open(sys.argv[1], "r").read()
 tokens = lex(code)
-
-
+# help(tokens)
+# exit(0)
 
 parser = Parser()
 ast = parser.parse(tokens)
+#print(ast)
+
 
 print(codegen(ast))
+exit(0)
 # exit(0)
 # print(emitexpr(ast))
 

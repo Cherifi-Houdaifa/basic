@@ -18,7 +18,7 @@ class Types(enum.Enum):
     lteq = 12
     ident = 13
     number = 14
-    quote = 15
+    string = 15
     assignment = 16
     plus = 17
     minus = 18
@@ -27,6 +27,7 @@ class Types(enum.Enum):
     openpth = 21
     closepth = 22
     semicolon = 23
+    INPUT = 24
     def __repr__(self) -> str:
         return f"\"{str(self.name)}\""
 
@@ -52,41 +53,70 @@ def lex(code: str) -> list[Token]:
         if line == " ":
             continue
         current = ""
+        instring = False
         for char in line:
             # maybe check for char instead of current for single char tokens so that "(a" won't be counted as a single token, but two tokens
-            if char == " ":
-                # check what the current token is
-                if current == "IF":
-                    rslt.append(Token(Types.IF, None))
-                elif current == "THEN":
-                    rslt.append(Token(Types.THEN, None))
-                elif current == "ENDIF":
-                    rslt.append(Token(Types.ENDIF, None))
-                elif current == ">":
-                    rslt.append(Token(Types.gt, ">"))
-                elif current == "=":
-                    rslt.append(Token(Types.assignment, None))
-                elif current == "+":
-                    rslt.append(Token(Types.plus, "+"))
-                elif current == "-":
-                    rslt.append(Token(Types.minus, "-"))
-                elif current == "*":
-                    rslt.append(Token(Types.star, "*"))
-                elif current == "/":
-                    rslt.append(Token(Types.slash, "/"))
-                elif current == "(":
-                    rslt.append(Token(Types.openpth, None))
-                elif current == ")":
-                    rslt.append(Token(Types.closepth, None))
-                elif current == ";":
-                    rslt.append(Token(Types.semicolon, None))
-                elif current.isdigit():
-                    rslt.append(Token(Types.number, current))
+            if not instring:
+                if char == '"':
+                    # now we are inside a string
+                    instring = True
+                    current = ""
+
+                elif char == " ":
+                    if current != "":
+                        # check what the current token is
+                        if current == "IF":
+                            rslt.append(Token(Types.IF, None))
+                        elif current == "THEN":
+                            rslt.append(Token(Types.THEN, None))
+                        elif current == "ENDIF":
+                            rslt.append(Token(Types.ENDIF, None))
+                        elif current == "LET":
+                            rslt.append(Token(Types.LET, None))
+                        elif current == "PRINT":
+                            rslt.append(Token(Types.PRINT, None))
+                        elif current == "INPUT":
+                            rslt.append(Token(Types.INPUT, None))
+                        elif current == "WHILE":
+                            rslt.append(Token(Types.WHILE, None))
+                        elif current == "DO":
+                            rslt.append(Token(Types.DO, None))
+                        elif current == "ENDWHILE":
+                            rslt.append(Token(Types.ENDWHILE, None))
+                        elif current == ">":
+                            rslt.append(Token(Types.gt, ">"))
+                        elif current == "=":
+                            rslt.append(Token(Types.assignment, None))
+                        elif current == "+":
+                            rslt.append(Token(Types.plus, "+"))
+                        elif current == "-":
+                            rslt.append(Token(Types.minus, "-"))
+                        elif current == "*":
+                            rslt.append(Token(Types.star, "*"))
+                        elif current == "/":
+                            rslt.append(Token(Types.slash, "/"))
+                        elif current == "(":
+                            rslt.append(Token(Types.openpth, None))
+                        elif current == ")":
+                            rslt.append(Token(Types.closepth, None))
+                        elif current == ";":
+                            rslt.append(Token(Types.semicolon, None))
+                        elif current.isdigit():
+                            rslt.append(Token(Types.number, current))
+                        else:
+                            rslt.append(Token(Types.ident, current))
+                    current = ""
                 else:
-                    rslt.append(Token(Types.ident, current))
-                current = ""
+                    current += char
             else:
-                current += char
+                if char == '"':
+                    # string has ended
+                    instring = False
+                    rslt.append(Token(Types.string, current))
+                    current = ""
+                else:
+                    current += char
+
     return rslt
 
 
