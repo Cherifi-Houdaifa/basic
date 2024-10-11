@@ -195,6 +195,9 @@ class Parser:
             self.abort("wrong usage of LET")
         if tokens[1].type != Types.ident:
             self.abort("you can only define a variable using LET")
+        if tokens[2].type != Types.semicolon:
+            self.abort("no semicolon")
+        
         return letdefinition(tokens[1])
 
     def handleprint(self, tokens: list[Token]) -> printstatement:
@@ -202,6 +205,8 @@ class Parser:
             self.abort("wrong usage of PRINT")
         if tokens[1].type not in [Types.ident, Types.string, Types.number]:
             self.abort("you can only print strings or variables or numbers")
+        if tokens[2].type != Types.semicolon:
+            self.abort("no semicolon")
         return printstatement(tokens[1])
     
     def handleinput(self, tokens: list[Token]) -> inputstatement:
@@ -209,6 +214,9 @@ class Parser:
             self.abort("wrong usage of INPUT")
         if tokens[1].type not in [Types.ident]:
             self.abort("you can only input numbers")
+        if tokens[2].type != Types.semicolon:
+            self.abort("no semicolon")
+        
         return inputstatement(tokens[1])
  
     def handlewhile(self, tokens: list[Token]) -> whilestatement:

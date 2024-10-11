@@ -85,6 +85,14 @@ def lex(code: str) -> list[Token]:
                             rslt.append(Token(Types.ENDWHILE, None))
                         elif current == ">":
                             rslt.append(Token(Types.gt, ">"))
+                        elif current == "<":
+                            rslt.append(Token(Types.lt, "<"))
+                        elif current == "==":
+                            rslt.append(Token(Types.eq, "=="))
+                        elif current == ">=":
+                            rslt.append(Token(Types.gteq, ">="))
+                        elif current == "<=":
+                            rslt.append(Token(Types.lteq, "<="))
                         elif current == "=":
                             rslt.append(Token(Types.assignment, None))
                         elif current == "+":

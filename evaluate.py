@@ -1,7 +1,7 @@
 from parse import expr
 from lex import Token, Types
 
-
+# this evaluates an expression
 def evalute(expression: expr | Token):
     if type(expression) == Token:
         return int(expression.value)
