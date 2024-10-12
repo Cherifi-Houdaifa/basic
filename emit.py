@@ -1,12 +1,14 @@
 # turn tree into code (c code)
-from parse import ifstatment, comparision, assignment, expr, letdefinition, printstatement, inputstatement, whilestatement
+from parse import ifstatment, assignment, expr, letdefinition, printstatement, inputstatement, whilestatement, unary
 from lex import Types
 from lex import Token
 
 
-def emitexpr(statment: expr | Token) -> str:
+def emitexpr(statment: expr | Token | unary) -> str:
     if type(statment) == Token:
         return f"{statment.value}"
+    if type(statment) == unary:
+        return f"({statment.op.value} {emitexpr(statment.arg)})"
     return f"({emitexpr(statment.left)} {statment.op.value} {emitexpr(statment.right)})"    
 # takes a statment and gives it's code
 def emit(statments) -> str:
@@ -20,11 +22,9 @@ def emit(statments) -> str:
             rslt += f"""while ({emit([statment.cmp])}) {{
     {emit(statment.body)}
 }}\n"""
-        elif type(statment) == comparision:
-            rslt += f"{statment.left.value} {statment.op.value} {statment.right.value}"
         elif type(statment) == assignment:
             rslt += f"{statment.op.value} = {emitexpr(statment.value)};\n"
-        elif type(statment) == expr:
+        elif type(statment) in [expr, unary]:
             rslt += emitexpr(statment)
         elif type(statment) == letdefinition:
             rslt += f"int {statment.op.value};\n"

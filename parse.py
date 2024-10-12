@@ -7,28 +7,27 @@ class printable:
     def __repr__(self) -> str:
         return str(vars(self))
 
-
-class comparision(printable):
-    def __init__(self, left: Token, op: Token, right: Token) -> None:
-        self.left = left
-        self.op = op
-        self.right = right
-
-class ifstatment(printable):
-    def __init__(self, cmp: comparision, body: list):
-        self.cmp = cmp
-        self.body = body
-
-class whilestatement(printable):
-    def __init__(self, cmp: comparision, body: list):
-        self.cmp = cmp
-        self.body = body
-
 class expr(printable):
     def __init__(self, left, op: Token, right):
         self.left = left
         self.op = op
         self.right = right
+
+class unary(printable):
+    def __init__(self, op: Token, arg):
+        self.op = op
+        self.arg = arg
+
+class ifstatment(printable):
+    def __init__(self, cmp: expr | unary, body: list):
+        self.cmp = cmp
+        self.body = body
+
+class whilestatement(printable):
+    def __init__(self, cmp: expr | unary, body: list):
+        self.cmp = cmp
+        self.body = body
+
 
 class assignment(printable):
     def __init__(self, op: Token, value: expr | Token):
@@ -129,20 +128,20 @@ class Parser:
         else:
             self.abort("no ENDIF after THEN")
         
-        return ifstatment(cmp=self.handlecmp(cmptokens), body=self.parse(bodytokens))
+        return ifstatment(cmp=self.handleexpr(cmptokens), body=self.parse(bodytokens))
     
     # takes comparision tokens and returns a comparision object
     # this thing is simple (no expressions)
-    def handlecmp(self, tokens: list[Token]) -> comparision:
-        if len(tokens) != 3:
-            self.abort("comparision should be of the form a > 20, nothing complicated yet")
-        if tokens[0].type not in [Types.number, Types.ident]:
-            self.abort("left operand in comparision should be either number or identifier")
-        if tokens[1].type not in cmpoperators:
-            self.abort("not comparision operator after left op")
-        if tokens[2].type not in [Types.number, Types.ident]:
-            self.abort("right operand in comparision should be either number or identifier")
-        return comparision(tokens[0], tokens[1], tokens[2])
+    # def handlecmp(self, tokens: list[Token]) -> comparision:
+    #     if len(tokens) != 3:
+    #         self.abort("comparision should be of the form a > 20, nothing complicated yet")
+    #     if tokens[0].type not in [Types.number, Types.ident]:
+    #         self.abort("left operand in comparision should be either number or identifier")
+    #     if tokens[1].type not in cmpoperators:
+    #         self.abort("not comparision operator after left op")
+    #     if tokens[2].type not in [Types.number, Types.ident]:
+    #         self.abort("right operand in comparision should be either number or identifier")
+    #     return comparision(tokens[0], tokens[1], tokens[2])
         
     def handleassignment(self, tokens: list[Token]) -> assignment:
         if tokens[0].type != Types.ident:
@@ -154,7 +153,7 @@ class Parser:
 
     # to parse it, think of it as a sum of products (after dealing with parentheses)
     # btw pth stands for parenthese (it's too long to write every time)
-    def handleexpr(self, tokens: list[Token | expr] | Token | expr) -> expr:
+    def handleexpr(self, tokens: list[Token | expr | unary] | Token | expr | unary) -> expr | unary:
         if len(tokens) == 1:
             return tokens[0]
 
@@ -179,16 +178,32 @@ class Parser:
             tokens = tokens[0:pth[0]] + [self.handleexpr(tokens[pth[0] + 1: pth[1]])] + tokens[pth[1]+1:]
         if len(tokens) == 1:
             return tokens[0]
-        
-        for i in range(len(tokens)):
-            if type(tokens[i]) == Token and tokens[i].type in [Types.plus, Types.minus]:
-                # make an expression
-                return expr(self.handleexpr(tokens[0:i]), tokens[i], self.handleexpr(tokens[i+1:]))
+
+        # handle unary 
+        for i in range(len(tokens)-1, -1, -1):
+            if type(tokens[i]) == Token and tokens[i].type in [Types.lognot, Types.bitnot]:
+                if (type(tokens[i+1]) not in [expr, unary, Token]) or tokens[i+1].type not in [Types.number, Types.ident]:
+                    self.abort("invalid usage of unary")
+                tokens = tokens[0:i] + [unary(tokens[i], tokens[i+1])] + tokens[i+2:]
+        if len(tokens) == 1:
+            return tokens[0]
+
+        # array that contains arrays operators (lowest procedence first)
+        opsarray = [[Types.logor], [Types.logand], [Types.bitor], [Types.bitxor], [Types.bitand], [Types.eq, Types.noteq], [Types.lt, Types.lteq, Types.gt, Types.gteq], [Types.leftshift, Types.rightshift], [Types.plus, Types.minus], [Types.star, Types.slash, Types.mod]]
+
         # we are here because there are only products or divisions
-        for i in range(len(tokens)):
-            if type(tokens[i]) == Token and tokens[i].type in [Types.star, Types.slash]:
-                # make an expression
-                return expr(self.handleexpr(tokens[0:i]), tokens[i], self.handleexpr(tokens[i+1:]))
+        for ops in opsarray:
+            for i in range(len(tokens)):
+                if type(tokens[i]) == Token and tokens[i].type in ops:
+                    # make an expression
+                    j = i + 1
+                    while j < len(tokens):
+                        if type(tokens[j]) == Token and tokens[j].type in ops:
+                            #return expr(expr(self.handleexpr(tokens[0:i]), tokens[i], self.handleexpr(tokens[i+1:j])), tokens[j], self.handleexpr(tokens[j+1:]))
+                            return self.handleexpr([expr(self.handleexpr(tokens[0:i]), tokens[i], self.handleexpr(tokens[i+1:j]))] + tokens[j:])
+                        j+=1
+                    else:
+                        return expr(self.handleexpr(tokens[0:i]), tokens[i], self.handleexpr(tokens[i+1:]))
 
     def handlelet(self, tokens: list[Token]) -> letdefinition:
         if len(tokens) != 3:
@@ -240,7 +255,7 @@ class Parser:
             i+=1
         else:
             self.abort("no ENDWHILE after DO")
-        return whilestatement(self.handlecmp(cmptokens), self.parse(bodytokens))
+        return whilestatement(self.handleexpr(cmptokens), self.parse(bodytokens))
         
     def abort(self, message, exitcode=1):
         print("Error:", message)

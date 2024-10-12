@@ -28,6 +28,17 @@ class Types(enum.Enum):
     closepth = 22
     semicolon = 23
     INPUT = 24
+    noteq = 25
+    lognot = 26
+    bitnot = 27
+    mod = 28
+    leftshift = 29
+    rightshift = 30
+    bitand = 31
+    bitxor = 32
+    bitor = 33
+    logand = 34
+    logor = 35
     def __repr__(self) -> str:
         return f"\"{str(self.name)}\""
 
@@ -89,6 +100,8 @@ def lex(code: str) -> list[Token]:
                             rslt.append(Token(Types.lt, "<"))
                         elif current == "==":
                             rslt.append(Token(Types.eq, "=="))
+                        elif current == "!=":
+                            rslt.append(Token(Types.noteq, "!="))
                         elif current == ">=":
                             rslt.append(Token(Types.gteq, ">="))
                         elif current == "<=":
@@ -103,6 +116,27 @@ def lex(code: str) -> list[Token]:
                             rslt.append(Token(Types.star, "*"))
                         elif current == "/":
                             rslt.append(Token(Types.slash, "/"))
+                        elif current == "!":
+                            rslt.append(Token(Types.lognot, "!"))
+                        elif current == "~":
+                            rslt.append(Token(Types.bitnot, "~"))
+                        elif current == "%":
+                            rslt.append(Token(Types.mod, "%"))
+                        elif current == "<<":
+                            rslt.append(Token(Types.leftshift, "<<"))
+                        elif current == ">>":
+                            rslt.append(Token(Types.rightshift, ">>"))
+                        elif current == "&":
+                            rslt.append(Token(Types.bitand, "&"))
+                        elif current == "^":
+                            rslt.append(Token(Types.bitxor, "^"))
+                        elif current == "|":
+                            rslt.append(Token(Types.bitor, "|"))
+                        elif current == "&&":
+                            rslt.append(Token(Types.logand, "&&"))
+                        elif current == "||":
+                            rslt.append(Token(Types.logor, "||"))
+                        
                         elif current == "(":
                             rslt.append(Token(Types.openpth, None))
                         elif current == ")":

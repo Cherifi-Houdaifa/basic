@@ -6,7 +6,7 @@ A simple basic like compiler to c.
 PRINT "This is example program\n" ; 
 LET max ;
 LET i ;
-PRINT "max loops: "
+PRINT "max loops: " ;
 INPUT max ;
 i = 0 ;
 IF max > 20 THEN
